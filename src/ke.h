@@ -13,6 +13,7 @@
 
 #define KE_ERROR(message) (ke_error((message), __FILE__, __LINE__))
 #define KE_ERROR_KILL(message) (ke_error_kill((message), __FILE__, __LINE__))
+#define KE_ERROR_EXIT(message) (ke_error_exit((message), __FILE__, __LINE__))
 
 /* Function that does the set up of the KE error-handling library */
 void ke_init(void);
@@ -39,6 +40,8 @@ void ke_pop_elem_no(void);
 void ke_error(const char *message, const char *file, int line);
 /* Function that prints an error message to the output and handles all scopes */
 void ke_error_kill(const char *message, const char *file, int line);
+/* Function that prints an error message to the output and handles all scopes and exits the whole application */
+void ke_error_exit(const char *message, const char *file, int line);
 
 #ifdef KE_IMPL
 #undef KE_IMPL
@@ -225,6 +228,11 @@ void ke_error_kill(const char *message, const char *file, int line) {
   fprintf(KE_OUT, "ERROR in %s at %d: %s. This might help: %s\n", file, line, message, strerror(errno));
 
   while (ke_stack.scopes_count) ke_pop_scope();
+}
+void ke_error_exit(const char *message, const char *file, int line) {
+  ke_error_kill(message, file, line);
+  ke_free();
+  exit(1);
 }
 
 
