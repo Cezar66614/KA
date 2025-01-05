@@ -9,4 +9,4 @@ Basic vectors and strings (plus some string manipulation: copy, concatanate, sli
 Will implement better pointers, n-dimensional vectors
 
 # KAE
-An extension for this library that implements stack, queue and linked-list
+An extension for this library that will implement stack, queue and linked-list
