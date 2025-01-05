@@ -11,9 +11,9 @@
 #define KE_OUT stderr
 #endif // KE_OUT
 
-#define KE_ERROR(message) (ke_error((message), __FILE__, __LINE__))
-#define KE_ERROR_KILL(message) (ke_error_kill((message), __FILE__, __LINE__))
-#define KE_ERROR_EXIT(message) (ke_error_exit((message), __FILE__, __LINE__))
+#define KE_ERROR(message) ke_error((message), __FILE__, __LINE__)
+#define KE_ERROR_KILL(message) ke_error_kill((message), __FILE__, __LINE__)
+#define KE_ERROR_EXIT(message) ke_error_exit((message), __FILE__, __LINE__)
 
 /* Function that does the set up of the KE error-handling library */
 void ke_init(void);
@@ -28,9 +28,12 @@ void ke_pop_scope(void);
 void ke_pop_scope_no(void);
 
 /* Function that adds a new element to the current scope to handle
-  One and only one of the two parameters must be set
+  It has three modes:
+  1. ONLY 'pointer' is set: calls 'free(pointer)' when handling the element
+  2. ONLY 'function' is set: calls 'function' with the parameter being NULL and that should handle the element
+  3. BOTH are set: calls 'function' with 'pointer' as the parameter
 */
-void ke_push_elem(void *pointer, void (*function)(void));
+void ke_push_elem(void *pointer, void (*function)(void *));
 /* Function that removes the newest element from the current scope, it gets handled */
 void ke_pop_elem(void);
 /* Function that removes the newest element from the current scope, it doesn't get handled */
@@ -49,13 +52,14 @@ void ke_error_exit(const char *message, const char *file, int line);
 typedef enum ke_elem_type_enum {
   KE_TYPE_UNUSED = 0,
   KE_TYPE_POINTER,
-  KE_TYPE_FUNCTION
+  KE_TYPE_FUNCTION,
+  KE_TYPE_BOTH
 } KE_ELEM_TYPE;
 
 typedef struct ke_elem_struct {
-  union ke_elem_union {
+  struct ke_elem_value_struct {
     void *point;
-    void (*func)(void);
+    void (*func)(void *);
   } value;
   KE_ELEM_TYPE elem_type;
 } ke_elem_t;
@@ -151,7 +155,7 @@ void ke_pop_scope_no(void) {
   --(ke_stack.scopes_count);
 }
 
-void ke_push_elem(void *pointer, void (*function)(void)) {
+void ke_push_elem(void *pointer, void (*function)(void *)) {
   if (!(ke_stack.scopes_count)) return;
 
   if (ke_stack.scopes[ke_stack.scopes_count - 1].elems_count == ke_stack.scopes[ke_stack.scopes_count - 1].elems_space) {
@@ -181,6 +185,12 @@ void ke_push_elem(void *pointer, void (*function)(void)) {
   if (pointer != NULL) {
     ke_stack.scopes[ke_stack.scopes_count - 1].elems[ke_stack.scopes[ke_stack.scopes_count - 1].elems_count].value.point = pointer;
     ke_stack.scopes[ke_stack.scopes_count - 1].elems[ke_stack.scopes[ke_stack.scopes_count - 1].elems_count].elem_type = KE_TYPE_POINTER;
+  
+    if (function != NULL) {
+      ke_stack.scopes[ke_stack.scopes_count - 1].elems[ke_stack.scopes[ke_stack.scopes_count - 1].elems_count].value.func = function;
+      ke_stack.scopes[ke_stack.scopes_count - 1].elems[ke_stack.scopes[ke_stack.scopes_count - 1].elems_count].elem_type = KE_TYPE_BOTH;
+    }
+
   } else if (function != NULL) {
     ke_stack.scopes[ke_stack.scopes_count - 1].elems[ke_stack.scopes[ke_stack.scopes_count - 1].elems_count].value.func = function;
     ke_stack.scopes[ke_stack.scopes_count - 1].elems[ke_stack.scopes[ke_stack.scopes_count - 1].elems_count].elem_type = KE_TYPE_FUNCTION;
@@ -198,7 +208,11 @@ void ke_pop_elem(void) {
     }
   } else if (ke_stack.scopes[ke_stack.scopes_count - 1].elems[ke_stack.scopes[ke_stack.scopes_count - 1].elems_count - 1].elem_type == KE_TYPE_FUNCTION) {
     if (ke_stack.scopes[ke_stack.scopes_count - 1].elems[ke_stack.scopes[ke_stack.scopes_count - 1].elems_count - 1].value.func != NULL) {
-      ke_stack.scopes[ke_stack.scopes_count - 1].elems[ke_stack.scopes[ke_stack.scopes_count - 1].elems_count - 1].value.func();
+      ke_stack.scopes[ke_stack.scopes_count - 1].elems[ke_stack.scopes[ke_stack.scopes_count - 1].elems_count - 1].value.func(NULL);
+    }
+  } else if (ke_stack.scopes[ke_stack.scopes_count - 1].elems[ke_stack.scopes[ke_stack.scopes_count - 1].elems_count - 1].elem_type == KE_TYPE_BOTH) {
+    if (ke_stack.scopes[ke_stack.scopes_count - 1].elems[ke_stack.scopes[ke_stack.scopes_count - 1].elems_count - 1].value.func != NULL) {
+      ke_stack.scopes[ke_stack.scopes_count - 1].elems[ke_stack.scopes[ke_stack.scopes_count - 1].elems_count - 1].value.func(ke_stack.scopes[ke_stack.scopes_count - 1].elems[ke_stack.scopes[ke_stack.scopes_count - 1].elems_count - 1].value.point);
     }
   }
 
