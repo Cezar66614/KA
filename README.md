@@ -1,10 +1,10 @@
+# **WIP**
+
 # KA
 My own C memory allocation library.
 
 Working:\
 Basic vectors and strings (plus some string manipulation: copy, concatanate, slice) - fully working and memory safe hopefully
-
-**WIP**
 
 Will implement better pointers, n-dimensional vectors
 
